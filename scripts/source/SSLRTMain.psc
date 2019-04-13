@@ -29,23 +29,33 @@ Function RemoveRapeTrauma(Actor victim)
 	if (Utility.RandomInt() < SSLRTRemovePercent.GetValue())
 		Actor Player = Game.GetPlayer()
 		Perk[] perks = self._getPerks(victim)
+		Spell[] spells = self._getSpells(victim)
+		
 		if (player.HasPerk(perks[4]))
-			player.RemovePerk(perks[4])
-			return
+			self._downRapeTrauma(player, perks, spells, 4)
 		elseif (player.HasPerk(perks[3]))
-			player.RemovePerk(perks[3])
-			return
+			self._downRapeTrauma(player, perks, spells, 3)
 		elseif (player.HasPerk(perks[2]))
-			player.RemovePerk(perks[2])
-			return
+			self._downRapeTrauma(player, perks, spells, 2)
 		elseif (player.HasPerk(perks[1]))
-			player.RemovePerk(perks[1])
-			return
+			self._downRapeTrauma(player, perks, spells, 1)
 		elseif (player.HasPerk(perks[0]))
-			player.RemovePerk(perks[0])
-			return
+			self._downRapeTrauma(player, perks, spells, 0)
 		endif
 	endif
+EndFunction
+
+Function _downRapeTrauma(Actor act, Perk[] perks, Spell[] spells, int level)
+	act.RemovePerk(perks[level])
+	act.RemoveSpell(spells[level])
+	if (level != 0)
+		int x = level - 1
+		act.AddSpell(spells[x])
+	endif
+	
+	act.AddSpell(SSLRTRemoveTrauma)
+	Utility.Wait(1.0)
+	act.RemoveSpell(SSLRTRemoveTrauma)
 EndFunction
 
 Function _addRapeTrauma(Actor player, int level, Perk[] perks)
@@ -86,6 +96,19 @@ Perk[] Function _getPerks(Actor act)
 	endif
 EndFunction
 
+Spell[] Function _getSpells(Actor act)
+	if (act.HasKeyword(ActorTypeNPC))
+		return MaleSpells
+	elseif (act.HasKeyword(ActorTypeDwarven))
+		return DwarvenSpells 
+	elseif (act.IsInFaction(PredatorFaction))
+		return PredatorSpells
+	else
+		return CreatureSpells
+	endif
+EndFunction
+
+
 SexLabFramework Property SexLab Auto
 
 Keyword Property ActorTypeNPC  Auto  
@@ -97,5 +120,12 @@ Perk[] Property MalePerks  Auto
 Perk[] Property DwarvenPerks  Auto  
 Perk[] Property PredatorPerks  Auto  
 Perk[] Property CreaturePerks  Auto  
+
+SPELL[] Property MaleSpells  Auto  
+SPELL[] Property CreatureSpells  Auto  
+SPELL[] Property DwarvenSpells  Auto  
+SPELL[] Property PredatorSpells  Auto  
+; SPELL[] Property PredetorSpells  Auto  ; fuck, miss spell
+SPELL Property SSLRTRemoveTrauma  Auto  
 
 GlobalVariable Property SSLRTRemovePercent  Auto  
