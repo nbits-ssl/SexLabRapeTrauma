@@ -1,7 +1,7 @@
 Scriptname SSLRTMain extends Quest  
 
 Event OnInit()
-	RegisterForModEvent("HookStageStart", "AddRapeTrauma")
+	RegisterForModEvent("HookAnimationStart", "AddRapeTrauma")
 EndEvent
 
 Event AddRapeTrauma(int tid, bool hasPlayer)
@@ -19,10 +19,12 @@ Event AddRapeTrauma(int tid, bool hasPlayer)
 		return
 	endif
 	
-	Perk[] perks = self._getPerks(controller.Positions[1])
+	Actor act = controller.Positions[1]
+	Perk[] perks = self._getPerks(act)
+	Spell[] spells = self._getSpells(act)
 	int level = controller.Positions.length - 1
 	
-	self._addRapeTrauma(Player, level, perks)
+	self._addRapeTrauma(Player, perks, spells, level)
 EndEvent
 
 Function RemoveRapeTrauma(Actor victim)
@@ -40,47 +42,83 @@ Function RemoveRapeTrauma(Actor victim)
 		elseif (player.HasPerk(perks[1]))
 			self._downRapeTrauma(player, perks, spells, 1)
 		elseif (player.HasPerk(perks[0]))
-			self._downRapeTrauma(player, perks, spells, 0)
+			self._downRapeTrauma(player, perks, spells, 0, true)
 		endif
 	endif
 EndFunction
 
-Function _downRapeTrauma(Actor act, Perk[] perks, Spell[] spells, int level)
+Function _downRapeTrauma(Actor act, Perk[] perks, Spell[] spells, int level, bool allremove = false)
 	act.RemovePerk(perks[level])
 	act.RemoveSpell(spells[level])
 	if (level != 0)
 		int x = level - 1
-		act.AddSpell(spells[x])
+		act.AddSpell(spells[x], false)
 	endif
 	
-	act.AddSpell(SSLRTRemoveTrauma)
+	act.AddSpell(SSLRTRemoveTrauma, false)
 	Utility.Wait(1.0)
 	act.RemoveSpell(SSLRTRemoveTrauma)
+	
+	if (allremove)
+		debug.notification("$SLRTAllRemoveTrauma")
+	else
+		debug.notification("$SLRTRemoveTrauma")
+	endif
 EndFunction
 
-Function _addRapeTrauma(Actor player, int level, Perk[] perks)
-	if (player.HasPerk(perks[4]))
+Function _addRapeTrauma(Actor player, Perk[] perks, Spell[] spells, int level)
+	bool newtrauma = false
+	int perklevel = 0
+	; level max = 4 (5P)
+	
+	if (player.HasPerk(perks[4])) ; lv.5
 		return
-	elseif (player.HasPerk(perks[3]))
-		player.AddPerk(perks[4])
-	elseif (player.HasPerk(perks[2]))
+	elseif (player.HasPerk(perks[3])) ; lv.4
+		perklevel = 4
+	elseif (player.HasPerk(perks[2])) ; lv.3
 		if (level == 1)
-			player.AddPerk(perks[3])
+			perklevel = 3
 		else
-			player.AddPerk(perks[4])
+			perklevel = 4
 		endif
-	elseif (player.HasPerk(perks[1]))
+	elseif (player.HasPerk(perks[1])) ; lv.2
 		if (level <= 2)
-			player.AddPerk(perks[level + 1])
+			perklevel = level + 1
 		else
-			player.AddPerk(perks[4])
+			perklevel = 4
 		endif
-	else
+	elseif (player.HasPerk(perks[0])) ; lv.1
 		if (level <= 3)
-			player.AddPerk(perks[level])
+			perklevel = level
 		else
-			player.AddPerk(perks[4])
+			perklevel = 4
 		endif
+	else ; no trauma
+		newtrauma = true
+		perklevel = level - 1
+	endif
+	player.AddPerk(perks[perklevel])
+	
+	self._addSpells(player, perklevel, spells, newtrauma)
+EndFunction
+
+Function _addSpells(Actor player, int perklevel, Spell[] spells, bool newtrauma)
+	if (!newtrauma)
+		int len = spells.Length
+		while len > 0
+			len -= 1
+			player.RemoveSpell(spells[len])
+		endwhile
+	endif
+	
+	debug.trace("SLRT: " + perklevel)
+	player.AddSpell(spells[perklevel], false)
+	
+	Utility.Wait(1.0)
+	if (newtrauma)
+		debug.notification("$SLRTGetTrauma")
+	else
+		debug.notification("$SLRTAddTrauma")
 	endif
 EndFunction
 
