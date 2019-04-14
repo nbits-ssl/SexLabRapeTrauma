@@ -20,6 +20,10 @@ Event AddRapeTrauma(int tid, bool hasPlayer)
 	endif
 	
 	Actor act = controller.Positions[1]
+	if (act.GetActorBase().GetSex() != 0) ; not male
+		return
+	endif
+	
 	Perk[] perks = self._getPerks(act)
 	Spell[] spells = self._getSpells(act)
 	int level = controller.Positions.length - 1
